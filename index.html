@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --neon-green: #00ff9d;
+            --neon-blue: #00f7ff;
+            --dark-bg: #080b12;
+            --panel-bg: #111827;
+            --glow: 0 0 10px var(--neon-green);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        body {
+            background: var(--dark-bg);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            position: relative;
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 40px;
+            background: var(--panel-bg);
+            clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: var(--neon-green);
+            text-shadow: var(--glow);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-green);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-display {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.2em;
+            color: var(--neon-blue);
+        }
+
+        .qr-container {
+            display: none;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            width: fit-content;
+            margin: 20px auto;
+            position: relative;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn:not(:disabled):hover {
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            box-shadow: var(--glow);
+        }
+
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0,255,157,0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .status-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,255,157,0.2);
+        }
+
+        .status-value {
+            font-size: 2em;
+            color: var(--neon-green);
+            text-shadow: var(--glow);
+            margin: 10px 0;
+        }
+
+        .mobile-preview {
+            background: rgba(0,255,157,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        .connected {
+            background: rgba(0,255,157,0.2);
+            color: var(--neon-green);
+        }
+
+        .disconnected {
+            background: rgba(255,0,0,0.2);
+            color: #ff4444;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            background: var(--neon-green);
+            color: var(--dark-bg);
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>EcoTrack Control Panel</h1>
+        <p>Smart Waste Management System</p>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <div class="status-display" id="systemStatus">
+                System Ready - Waiting for New Waste Detection
+            </div>
+
+            <div class="qr-container" id="qrContainer">
+                <div id="qrcode"></div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn" id="generateBtn" onclick="generateNewQR()">Generate QR Code</button>
+                <button class="btn" id="validateBtn" onclick="validateQR()" disabled>Validate</button>
+            </div>
+
+            <div class="status-panel">
+                <div class="status-item">
+                    <h3>Today's Collections</h3>
+                    <div class="status-value" id="collections">0</div>
+                </div>
+                <div class="status-item">
+                    <h3>Total Points</h3>
+                    <div class="status-value" id="points">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mobile-preview">
+            <div id="connectionStatus" class="connection-status disconnected">
+                Mobile App: Disconnected
+            </div>
+            <p>Waiting for mobile app connection...</p>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        Notification Message
+    </div>
+
+    <script>
+        let qrcode = null;
+        let collections = 0;
+        let totalPoints = 0;
+        let currentQRActive = false;
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function generateNewQR() {
+            if (currentQRActive) {
+                showNotification("Please validate current QR code first!");
+                return;
+            }
+
+            const qrContainer = document.getElementById('qrContainer');
+            qrContainer.style.display = 'block';
+            
+            const qrText = "ECOTRACK-" + Date.now();
+            if (!qrcode) {
+                qrcode = new QRCode(document.getElementById("qrcode"), {
+                    text: qrText,
+                    width: 128,
+                    height: 128
+                });
+            } else {
+                qrcode.clear();
+                qrcode.makeCode(qrText);
+            }
+
+            currentQRActive = true;
+            document.getElementById('validateBtn').disabled = false;
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('systemStatus').textContent = "QR Code Generated - Ready for Scanning";
+            
+            // Simulate mobile app connection
+            setTimeout(() => {
+                document.getElementById('connectionStatus').className = 'connection-status connected';
+                document.getElementById('connectionStatus').textContent = 'Mobile App: Connected';
+                showNotification("Mobile app connected!");
+            }, 1500);
+        }
+
+        function validateQR() {
+            if (!currentQRActive) {
+                showNotification("Please generate a QR code first!");
+                return;
+            }
+
+            collections++;
+            const points = Math.floor(Math.random() * 50) + 50; // Random points between 50-100
+            totalPoints += points;
+
+            document.getElementById('collections').textContent = collections;
+            document.getElementById('points').textContent = totalPoints;
+
+            // Reset state
+            currentQRActive = false;
+            document.getElementById('validateBtn').disabled = true;
+            document.getElementById('generateBtn').disabled = false;
+            document.getElementById('systemStatus').textContent = "Validation Successful - Ready for New Waste";
+            
+            showNotification(`Validated! Awarded ${points} points`);
+
+            // Simulate mobile app disconnection
+            setTimeout(() => {
+                document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                document.getElementById('connectionStatus').textContent = 'Mobile App: Disconnected';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
